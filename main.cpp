@@ -31,6 +31,40 @@ static void on_title_changed(WebKitWebView *web_view, GParamSpec *pspec, gpointe
     }
 }
 
+// 处理导航策略决策，允许页面内的链接跳转
+static gboolean on_decide_policy(WebKitWebView *web_view, WebKitPolicyDecision *decision, 
+                                  WebKitPolicyDecisionType decision_type, gpointer user_data) {
+    if (decision_type == WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION) {
+        WebKitNavigationPolicyDecision *navigation_decision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
+        WebKitNavigationAction *action = webkit_navigation_policy_decision_get_navigation_action(navigation_decision);
+        WebKitURIRequest *request = webkit_navigation_action_get_request(action);
+        const gchar *uri = webkit_uri_request_get_uri(request);
+        
+        g_print("导航到: %s\n", uri ? uri : "(null)");
+        
+        // 允许所有导航请求
+        webkit_policy_decision_use(WEBKIT_POLICY_DECISION(navigation_decision));
+        return TRUE;
+    }
+    
+    // 处理新窗口策略
+    if (decision_type == WEBKIT_POLICY_DECISION_TYPE_NEW_WINDOW_ACTION) {
+        WebKitNavigationPolicyDecision *navigation_decision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
+        WebKitNavigationAction *action = webkit_navigation_policy_decision_get_navigation_action(navigation_decision);
+        WebKitURIRequest *request = webkit_navigation_action_get_request(action);
+        const gchar *uri = webkit_uri_request_get_uri(request);
+        
+        g_print("新窗口请求: %s\n", uri ? uri : "(null)");
+        
+        // 在当前窗口打开而不是新窗口
+        webkit_web_view_load_uri(web_view, uri);
+        webkit_policy_decision_ignore(decision);
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
 static void on_activate(GtkApplication *app) {
     // 创建新窗口
     GtkWidget *window = gtk_application_window_new(app);
@@ -66,6 +100,9 @@ static void on_activate(GtkApplication *app) {
     g_signal_connect(go_button, "clicked", G_CALLBACK(on_go_button_clicked), NULL);
     g_signal_connect(web_view, "notify::title", G_CALLBACK(on_title_changed), window);
     
+    // 连接导航策略决策信号，允许页面内链接跳转
+    g_signal_connect(web_view, "decide-policy", G_CALLBACK(on_decide_policy), NULL);
+    
     // 支持在 Entry 中按回车键跳转
     g_signal_connect_swapped(entry, "activate", G_CALLBACK(on_go_button_clicked), go_button);
 
@@ -77,7 +114,7 @@ static void on_activate(GtkApplication *app) {
     gtk_box_pack_start(GTK_BOX(vbox), scrolled_window, TRUE, TRUE, 0);
 
     // 加载初始页面
-    webkit_web_view_load_uri(web_view, "https://www.google.com");
+    webkit_web_view_load_uri(web_view, "https://www.baidu.com");
 
     // 显示所有控件
     gtk_widget_show_all(window);
