@@ -18,8 +18,8 @@ include_directories(${GTK3_INCLUDE_DIRS} ${WEBKIT2_INCLUDE_DIRS})
 add_executable(aaa main.cpp)
 
 # 将 OpenCV, GTK 和 WebKit 库链接到可执行文件 aaa
-target_link_libraries(aaa 
-    ${OpenCV_LIBS} 
+target_link_libraries(aaa
+    ${OpenCV_LIBS}
     ${GTK3_LIBRARIES}
     ${WEBKIT2_LIBRARIES}
 )
